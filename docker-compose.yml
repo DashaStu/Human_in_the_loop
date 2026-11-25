@@ -1,0 +1,34 @@
+services:
+  bot:
+    build: .
+    container_name: ai_task_bot
+    command: python bot.py
+    env_file:
+      - .env
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - TELEGRAM_PROXY=http://host.docker.internal:10809
+    volumes:
+      - app_data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  web:
+    build: .
+    container_name: ai_task_web
+    command: streamlit run web.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - app_data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  app_data:

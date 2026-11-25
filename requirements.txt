@@ -1,0 +1,12 @@
+langgraph
+langgraph-checkpoint-sqlite
+langchain-core
+langchain-ollama
+langchain-openai
+python-dotenv
+pydantic
+aiogram
+aiohttp-socks
+streamlit
+pytest
+ruff
