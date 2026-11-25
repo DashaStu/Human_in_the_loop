@@ -17,14 +17,14 @@ init_db()
 
 
 PRIORITY_BADGES = {
-    "high": "🔴 Высокий",
-    "medium": "🟡 Средний",
-    "low": "🟢 Низкий",
+    "high": "Высокий",
+    "medium": "Средний",
+    "low": "Низкий",
 }
 STATUS_BADGES = {
-    "todo": "⬜ К выполнению",
-    "in_progress": "⏳ В работе",
-    "done": "✅ Готово",
+    "todo": "К выполнению",
+    "in_progress": "В работе",
+    "done": "Готово",
 }
 
 
@@ -32,20 +32,19 @@ def format_action_md(act: dict) -> str:
     name = act["name"]
     args = act["args"]
     if name == "create_task":
-        prio = PRIORITY_BADGES.get(args.get("priority", "medium"), "🟡 Средний")
+        prio = PRIORITY_BADGES.get(args.get("priority", "medium"), "Средний")
         desc = f"\n  - *Описание:* {args['description']}" if args.get("description") else ""
-        return f"📝 **Создать задачу:** «{args.get('title')}»\n  - *Приоритет:* {prio}{desc}"
+        return f"**Создать задачу:** «{args.get('title')}»\n  - *Приоритет:* {prio}{desc}"
     if name == "update_task_status":
         st_label = STATUS_BADGES.get(args.get("status", ""), args.get("status"))
-        return f"🔄 **Изменить статус задачи №{args.get('task_number')}** → {st_label}"
+        return f"**Изменить статус задачи №{args.get('task_number')}** → {st_label}"
     if name == "delete_task":
-        return f"🗑 **Удалить задачу №{args.get('task_number')}**"
-    return f"⚙️ **{name}**: `{args}`"
+        return f"**Удалить задачу №{args.get('task_number')}**"
+    return f"**{name}**: `{args}`"
 
 
-# --- Боковая панель: вход по коду из Telegram ---
 with st.sidebar:
-    st.title("🔗 Синхронизация")
+    st.title("Синхронизация")
 
     if "user" not in st.session_state:
         st.session_state.user = None
@@ -68,16 +67,15 @@ with st.sidebar:
     user = st.session_state.user
     st.success(f"Профиль: **{user['name'] or 'Telegram'}**\nКод: `{user['sync_code']}`")
 
-    if st.button("🧹 Новый диалог с агентом", use_container_width=True):
+    if st.button("Новый диалог с агентом", use_container_width=True):
         st.session_state.web_thread_id = f"web_{user['id']}_{uuid.uuid4().hex[:6]}"
         st.rerun()
 
-    if st.button("🚪 Выйти", use_container_width=True):
+    if st.button("Выйти", use_container_width=True):
         st.session_state.user = None
         st.rerun()
 
 
-# --- Основной экран: 2 колонки ---
 user = st.session_state.user
 config = {
     "configurable": {
@@ -88,13 +86,12 @@ config = {
 
 col_tasks, col_chat = st.columns([1.05, 1.15], gap="large")
 
-# === ЛЕВАЯ КОЛОНКА: ЗАДАЧИ ===
 with col_tasks:
     head_l, head_r = st.columns([3, 1])
     with head_l:
-        st.subheader("📋 Мои задачи")
+        st.subheader("Мои задачи")
     with head_r:
-        if st.button("🔄 Обновить", use_container_width=True):
+        if st.button("Обновить", use_container_width=True):
             st.rerun()
 
     filter_opt = st.radio(
@@ -127,18 +124,16 @@ with col_tasks:
                 b1, b2, b3 = st.columns(3)
                 with b1:
                     if t["status"] != "in_progress":
-                        if st.button(
-                            "⏳ В работу", key=f"prog_{t['id']}", use_container_width=True
-                        ):
+                        if st.button("В работу", key=f"prog_{t['id']}", use_container_width=True):
                             update_task_status_db(user["id"], t["task_num"], "in_progress")
                             st.rerun()
                 with b2:
                     if t["status"] != "done":
-                        if st.button("✅ Готово", key=f"done_{t['id']}", use_container_width=True):
+                        if st.button("Готово", key=f"done_{t['id']}", use_container_width=True):
                             update_task_status_db(user["id"], t["task_num"], "done")
                             st.rerun()
                     else:
-                        if st.button("↩ Вернуть", key=f"todo_{t['id']}", use_container_width=True):
+                        if st.button("Вернуть", key=f"todo_{t['id']}", use_container_width=True):
                             update_task_status_db(user["id"], t["task_num"], "todo")
                             st.rerun()
                 with b3:
@@ -147,9 +142,8 @@ with col_tasks:
                         st.rerun()
 
 
-# === ПРАВАЯ КОЛОНКА: ЧАТ С АГЕНТОМ ===
 with col_chat:
-    st.subheader("🤖 Чат с ассистентом")
+    st.subheader("Чат с ассистентом")
 
     state = graph.get_state(config)
     messages = state.values.get("messages", []) if state.values else []
@@ -180,12 +174,12 @@ with col_chat:
 
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("✅ Подтвердить", type="primary", use_container_width=True):
+                if st.button("Подтвердить", type="primary", use_container_width=True):
                     with st.spinner("Выполняю..."):
                         graph.invoke(Command(resume={"approved": True}), config)
                     st.rerun()
             with c2:
-                if st.button("❌ Отменить", use_container_width=True):
+                if st.button("Отменить", use_container_width=True):
                     with st.spinner("Отменяю..."):
                         graph.invoke(
                             Command(

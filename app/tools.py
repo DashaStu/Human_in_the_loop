@@ -22,8 +22,7 @@ def _get_user_id(config: RunnableConfig) -> int:
 def list_tasks(config: RunnableConfig, status: Optional[str] = None) -> str:
     """
     Показывает список задач текущего пользователя с их номерами.
-    Параметр status необязателен: можно передать 'todo', 'in_progress' или 'done'.
-    Если нужно показать все задачи — не передавай status (оставь None).
+    Параметр status необязателен: можно передать 'todo', 'in_progress' или 'done'
     """
     user_id = _get_user_id(config)
     valid_statuses = {"todo", "in_progress", "done"}

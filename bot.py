@@ -39,18 +39,17 @@ session = AiohttpSession(proxy=tg_proxy) if tg_proxy else None
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-# Хранит текущий thread_id для чата (меняется при нажатии "Новый диалог")
 ACTIVE_THREADS: dict[int, str] = {}
 
 PRIORITY_LABELS = {
-    "high": "🔴 Высокий",
-    "medium": "🟡 Средний",
-    "low": "🟢 Низкий",
+    "high": "Высокий",
+    "medium": "Средний",
+    "low": "Низкий",
 }
 STATUS_LABELS = {
-    "todo": "⬜ К выполнению",
-    "in_progress": "⏳ В работе",
-    "done": "✅ Готово",
+    "todo": "К выполнению",
+    "in_progress": "В работе",
+    "done": "Готово",
 }
 
 
@@ -63,10 +62,10 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📋 Мои задачи"),
-                KeyboardButton(text="🔑 Код для сайта"),
+                KeyboardButton(text="Мои задачи"),
+                KeyboardButton(text="Код для сайта"),
             ],
-            [KeyboardButton(text="🧹 Новый диалог")],
+            [KeyboardButton(text="Новый диалог")],
         ],
         resize_keyboard=True,
     )
@@ -76,8 +75,8 @@ def build_approval_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Подтвердить", callback_data="approve:yes"),
-                InlineKeyboardButton(text="❌ Отменить", callback_data="approve:no"),
+                InlineKeyboardButton(text="Подтвердить", callback_data="approve:yes"),
+                InlineKeyboardButton(text="Отменить", callback_data="approve:no"),
             ]
         ]
     )
@@ -90,21 +89,21 @@ def format_action_human(act: dict) -> str:
 
     if name == "create_task":
         title = html.escape(str(args.get("title", "")))
-        prio = PRIORITY_LABELS.get(args.get("priority", "medium"), "🟡 Средний")
+        prio = PRIORITY_LABELS.get(args.get("priority", "medium"), "Средний")
         desc = args.get("description")
         extra = f"\n   <i>Описание: {html.escape(str(desc))}</i>" if desc else ""
-        return f"📝 <b>Создать задачу:</b> «{title}»\n   Приоритет: {prio}{extra}"
+        return f" <b>Создать задачу:</b> «{title}»\n   Приоритет: {prio}{extra}"
 
     if name == "update_task_status":
         tnum = args.get("task_number")
         st = STATUS_LABELS.get(args.get("status", ""), args.get("status"))
-        return f"🔄 <b>Изменить статус задачи №{tnum}</b> → {st}"
+        return f"<b>Изменить статус задачи №{tnum}</b> → {st}"
 
     if name == "delete_task":
         tnum = args.get("task_number")
-        return f"🗑 <b>Удалить задачу №{tnum}</b>"
+        return f"<b>Удалить задачу №{tnum}</b>"
 
-    return f"⚙️ <b>{html.escape(name)}</b>: <code>{html.escape(str(args))}</code>"
+    return f"<b>{html.escape(name)}</b>: <code>{html.escape(str(args))}</code>"
 
 
 def build_tasks_view(user_id: int) -> tuple[str, InlineKeyboardMarkup]:
@@ -112,13 +111,11 @@ def build_tasks_view(user_id: int) -> tuple[str, InlineKeyboardMarkup]:
     tasks = list_tasks_db(user_id=user_id)
     if not tasks:
         kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="🔄 Обновить", callback_data="tasks_refresh")]
-            ]
+            inline_keyboard=[[InlineKeyboardButton(text="Обновить", callback_data="tasks_refresh")]]
         )
-        return "📋 <b>Список задач пока пуст.</b>\nНапиши мне, какую задачу добавить!", kb
+        return "<b>Список задач пока пуст.</b>\nНапиши мне, какую задачу добавить!", kb
 
-    lines = ["📋 <b>Твои задачи:</b>\n"]
+    lines = ["<b>Твои задачи:</b>\n"]
     buttons = []
 
     for t in tasks:
@@ -133,17 +130,17 @@ def build_tasks_view(user_id: int) -> tuple[str, InlineKeyboardMarkup]:
         buttons.append(
             [
                 InlineKeyboardButton(
-                    text=f"✅ №{t['task_num']} {short_title}",
+                    text=f"№{t['task_num']} {short_title}",
                     callback_data=f"task_done:{t['task_num']}",
                 ),
                 InlineKeyboardButton(
-                    text=f"🗑 №{t['task_num']}",
+                    text=f" №{t['task_num']}",
                     callback_data=f"task_del:{t['task_num']}",
                 ),
             ]
         )
 
-    buttons.append([InlineKeyboardButton(text="🔄 Обновить", callback_data="tasks_refresh")])
+    buttons.append([InlineKeyboardButton(text="Обновить", callback_data="tasks_refresh")])
     return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -169,34 +166,33 @@ async def send_graph_result(chat_id: int, result: dict):
     await bot.send_message(chat_id=chat_id, text=reply)
 
 
-# --- Команды и кнопки нижнего меню ---
 @dp.message(TgCommand("start"))
 async def cmd_start(message: Message):
     name = message.from_user.full_name if message.from_user else ""
     user = get_or_create_user_by_telegram(message.chat.id, name)
     await message.answer(
-        f"Привет, <b>{html.escape(name or 'друг')}</b>! 👋\n\n"
+        f"Привет, <b>{html.escape(name or 'друг')}</b>! \n\n"
         "Я твой AI-менеджер задач. Просто пиши мне обычным текстом, что нужно сделать.\n\n"
-        f"🔑 Твой код для синхронизации с сайтом:\n<code>{user['sync_code']}</code>",
+        f"Твой код для синхронизации с сайтом:\n<code>{user['sync_code']}</code>",
         parse_mode="HTML",
         reply_markup=main_menu_keyboard(),
     )
 
 
 @dp.message(TgCommand("code"))
-@dp.message(F.text == "🔑 Код для сайта")
+@dp.message(F.text == "Код для сайта")
 async def cmd_code(message: Message):
     name = message.from_user.full_name if message.from_user else ""
     user = get_or_create_user_by_telegram(message.chat.id, name)
     await message.answer(
-        f"🔑 Твой код для входа в веб-интерфейс (нажми, чтобы скопировать):\n\n"
+        f"Твой код для входа в веб-интерфейс (нажми, чтобы скопировать):\n\n"
         f"<code>{user['sync_code']}</code>",
         parse_mode="HTML",
     )
 
 
 @dp.message(TgCommand("tasks"))
-@dp.message(F.text == "📋 Мои задачи")
+@dp.message(F.text == "Мои задачи")
 async def cmd_tasks(message: Message):
     name = message.from_user.full_name if message.from_user else ""
     user = get_or_create_user_by_telegram(message.chat.id, name)
@@ -205,13 +201,12 @@ async def cmd_tasks(message: Message):
 
 
 @dp.message(TgCommand("reset"))
-@dp.message(F.text == "🧹 Новый диалог")
+@dp.message(F.text == "Новый диалог")
 async def cmd_reset(message: Message):
     ACTIVE_THREADS[message.chat.id] = f"tg_{message.chat.id}_{uuid.uuid4().hex[:6]}"
-    await message.answer("🧹 Память текущего диалога очищена! Начинаем с чистого листа.")
+    await message.answer("Память текущего диалога очищена! Начинаем с чистого листа.")
 
 
-# --- Быстрые кнопки под списком задач ---
 @dp.callback_query(F.data == "tasks_refresh")
 async def cb_tasks_refresh(callback: CallbackQuery):
     await callback.answer("Обновлено")
@@ -249,7 +244,6 @@ async def cb_task_del(callback: CallbackQuery):
         pass
 
 
-# --- Общение с AI-агентом ---
 @dp.message(F.text)
 async def handle_text(message: Message):
     chat_id = message.chat.id
@@ -290,7 +284,7 @@ async def handle_approval(callback: CallbackQuery):
         return
 
     approved = callback.data == "approve:yes"
-    status_label = "✅ <i>Подтверждено</i>" if approved else "❌ <i>Отменено</i>"
+    status_label = "<i>Подтверждено</i>" if approved else "<i>Отменено</i>"
 
     await callback.message.edit_text(
         text=f"{callback.message.html_text}\n\n{status_label}",

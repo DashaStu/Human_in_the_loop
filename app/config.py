@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 
-# Загружаем переменные из .env
 load_dotenv()
 logging.basicConfig(
     level=logging.INFO,
@@ -15,7 +14,7 @@ logging.basicConfig(
 os.environ["NO_PROXY"] = "localhost,127.0.0.1"
 os.environ["no_proxy"] = "localhost,127.0.0.1"
 
-# Папка для хранения баз данных (задачи и чекпоинты LangGraph)
+
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 

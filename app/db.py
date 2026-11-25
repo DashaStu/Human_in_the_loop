@@ -47,7 +47,6 @@ def init_db() -> None:
         conn.commit()
 
 
-# --- Работа с пользователями ---
 def _generate_unique_code(conn: sqlite3.Connection) -> str:
     while True:
         code = f"USER-{secrets.randbelow(9000) + 1000}"
@@ -83,7 +82,6 @@ def get_user_by_sync_code(sync_code: str) -> Optional[dict]:
         return dict(row) if row else None
 
 
-# --- Работа с задачами (личная нумерация task_num для каждого user_id) ---
 def list_tasks_db(user_id: int, status: Optional[str] = None) -> list[dict]:
     """Возвращает задачи конкретного пользователя, отсортированные по номеру."""
     with get_connection() as conn:

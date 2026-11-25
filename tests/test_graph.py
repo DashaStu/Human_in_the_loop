@@ -37,7 +37,6 @@ def test_safe_tool_executes_without_interrupt(temp_db, monkeypatch):
     cfg = {"configurable": {"thread_id": "t_safe", "user_id": user["id"]}}
     result = test_graph.invoke({"messages": [("user", "Покажи задачи")]}, cfg)
 
-    # Безопасный инструмент не должен ставить граф на паузу
     assert "__interrupt__" not in result
     assert "Купить молоко" in result["messages"][-1].content
 
@@ -66,13 +65,11 @@ def test_sensitive_tool_pauses_and_executes_after_approve(temp_db, monkeypatch):
 
     cfg = {"configurable": {"thread_id": "t_create", "user_id": user["id"]}}
 
-    # Шаг 1: граф должен встать на паузу, задача ещё НЕ в базе
     paused = test_graph.invoke({"messages": [("user", "Создай задачу Сдать отчёт")]}, cfg)
     assert "__interrupt__" in paused
     assert paused["__interrupt__"][0].value["actions"][0]["name"] == "create_task"
     assert list_tasks_db(user["id"]) == []
 
-    # Шаг 2: подтверждаем — задача появляется в базе
     resumed = test_graph.invoke(Command(resume={"approved": True}), cfg)
     assert "__interrupt__" not in resumed
     tasks = list_tasks_db(user["id"])
@@ -109,16 +106,14 @@ def test_reject_with_feedback_cancels_action_and_notifies_agent(temp_db, monkeyp
     paused = test_graph.invoke({"messages": [("user", "Удали задачу 1")]}, cfg)
     assert "__interrupt__" in paused
 
-    # Отклоняем действие и пишем комментарий
     resumed = test_graph.invoke(
         Command(resume={"approved": False, "feedback": "Оставь её, передумала"}),
         cfg,
     )
     assert "__interrupt__" not in resumed
-    # Задача НЕ удалена
+
     assert len(list_tasks_db(user["id"])) == 1
 
-    # Проверяем, что агент получил ToolMessage с нашим комментарием отказа
     second_call_messages = fake_llm.received_history[1]
     tool_msgs = [m for m in second_call_messages if isinstance(m, ToolMessage)]
     assert len(tool_msgs) == 1

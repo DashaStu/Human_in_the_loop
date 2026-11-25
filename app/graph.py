@@ -25,17 +25,14 @@ SYSTEM_PROMPT = """Ты — умный персональный ассистен
 """
 
 
-# 1. Описываем State (рюкзак с данными, который ходит по графу)
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
 
-# Подключаем инструменты к нашей LLM
 llm = get_llm()
 llm_with_tools = llm.bind_tools(ALL_TOOLS)
 
 
-# 2. Описываем Узлы (Nodes)
 def agent_node(state: AgentState) -> dict:
     """Узел мозга: LLM читает историю и решает — ответить текстом или вызвать инструмент."""
     messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
@@ -53,12 +50,10 @@ def human_review_node(
     """
     last_message = state["messages"][-1]
 
-    # Собираем понятный список действий, которые хочет сделать агент
     pending_actions = [
         {"id": tc["id"], "name": tc["name"], "args": tc["args"]} for tc in last_message.tool_calls
     ]
 
-    # ПАУЗА: граф сохраняется в SQLite и ждет вызова Command(resume=...)
     decision = interrupt(
         {
             "message": "Агент запрашивает разрешение на выполнение действий:",
@@ -67,13 +62,9 @@ def human_review_node(
     )
     logger.info("Human review decision=%s", decision)
 
-    # Когда граф разбудят, выполнение продолжится с этой строчки,
-    # а в переменной decision окажется то, что передал пользователь.
     if decision.get("approved"):
         return Command(goto="sensitive_tools")
 
-    # Если пользователь отклонил действие — формируем ToolMessage с причиной отказа,
-    # чтобы LLM поняла, что действие НЕ выполнилось, и учла комментарий.
     feedback = decision.get("feedback") or "Пользователь отклонил действие."
     rejection_messages = [
         ToolMessage(
@@ -85,23 +76,18 @@ def human_review_node(
     return Command(goto="agent", update={"messages": rejection_messages})
 
 
-# Готовые узлы из LangGraph для автоматического запуска Python-функций
 safe_tools_node = ToolNode(SAFE_TOOLS)
-# В sensitive_tools передаем ALL_TOOLS на случай, если LLM за один ход вызовет и safe, и sensitive инструмент вместе
 sensitive_tools_node = ToolNode(ALL_TOOLS)
 
 
-# 3. Описываем Условный переход (Роутер) после ответа агента
 def route_after_agent(
     state: AgentState,
 ) -> Literal["safe_tools", "human_review", "__end__"]:
     last_message = state["messages"][-1]
 
-    # Если инструментов вызывать не нужно — заканчиваем ход, отдаем текст юзеру
     if not getattr(last_message, "tool_calls", None):
         return END
 
-    # Проверяем, есть ли среди вызванных инструментов хоть один опасный
     called_names = {tc["name"] for tc in last_message.tool_calls}
     if called_names & SENSITIVE_TOOL_NAMES:
         return "human_review"
@@ -109,17 +95,14 @@ def route_after_agent(
     return "safe_tools"
 
 
-# 4. Собираем сам Граф
 def build_graph(checkpointer=None):
     builder = StateGraph(AgentState)
 
-    # Добавляем узлы
     builder.add_node("agent", agent_node)
     builder.add_node("safe_tools", safe_tools_node)
     builder.add_node("human_review", human_review_node)
     builder.add_node("sensitive_tools", sensitive_tools_node)
 
-    # Связываем узлы стрелочками
     builder.add_edge(START, "agent")
     builder.add_conditional_edges(
         "agent",
@@ -132,9 +115,7 @@ def build_graph(checkpointer=None):
     )
     builder.add_edge("safe_tools", "agent")
     builder.add_edge("sensitive_tools", "agent")
-    # Из human_review стрелки не рисуем — ими управляет Command(goto=...) внутри самого узла
 
-    # Подключаем персистентную память в SQLite
     if checkpointer is None:
         conn = sqlite3.connect(str(CHECKPOINTS_DB_PATH), check_same_thread=False, timeout=10.0)
         conn.execute("PRAGMA journal_mode=WAL;")
@@ -143,5 +124,4 @@ def build_graph(checkpointer=None):
     return builder.compile(checkpointer=checkpointer)
 
 
-# Единый скомпилированный граф для использования в API и CLI
 graph = build_graph()
